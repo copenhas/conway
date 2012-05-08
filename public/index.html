@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Conway Game of Life</title>
+
+        <link rel="stylesheet" href="/application.css"
+              type="text/css" media="screen" charset="utf-8" />
+    </head>
+    <body>
+        <div>
+            <label for="columns">Number of columns:</label>
+            <input id="columns" type="number" value="50" /> 
+        </div>
+        <div>
+            <label for="rows">Number of rows:</label>
+            <input id="rows" type="number" value="50" /> 
+        </div>
+        <div>
+            <button id="changeSize">Change Size</button>
+            <button id="seed">Seed</button>
+            <button id="clear">Clear</button>
+            <button id="toggle">Stop</button> 
+        </div>
+        <div>Generation: <span id="generation"></span></div>
+        <canvas id="game" width="100" height="100">
+            Yeah this depends on canvas support...so, 
+            what I'm saying is your browser sucks.
+        </canvas>
+    </body>
+    <script src="application.js" type="text/javascript"
+            charset="utf-8"></script>
+    <script type="text/javascript" charset="utf-8">
+        window.onload = function () {
+            var universe = require('universe'),
+                cell = require('cell');
+
+            var canvas = document.getElementById('game'),
+                context = canvas.getContext('2d'),
+                columns = document.getElementById('columns'),
+                rows = document.getElementById('rows'),
+                toggle = document.getElementById('toggle'),
+                changeSize = document.getElementById('changeSize'),
+                genDisplay = document.getElementById('generation'),
+                seedWorld = document.getElementById('seed'),
+                clearWorld = document.getElementById('clear');
+
+            var world = new universe.Universe(parseInt(columns.value, 10), 
+                                          parseInt(rows.value, 10)),
+                cellSize = 7,
+                running = true,
+                generation = 0;
+
+            var seed = function () {
+                var cols = world.columns(),
+                    rows = world.rows(),
+                    i = 0,
+                    max = Math.floor((cols * rows) / 4),
+                    x = 0,
+                    y = 0;
+
+                for (i; i < max; i += 1) {
+                    x = Math.floor(Math.random() * cols);
+                    y = Math.floor(Math.random() * rows);
+
+                    world.cells[y][x] = cell.alive;
+                }
+            };
+
+            var draw = function () {
+                genDisplay.innerText = generation.toString();
+                toggle.innerText = running ? "Stop" : "Start";
+
+                world.eachCell(function (col, row, cell) {
+                    if (cell.isAlive()) {
+                        context.fillStyle = 'black';
+                    }
+                    else {
+                        context.fillStyle = 'gray';
+                    }
+
+                    context.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                });
+            };
+
+            var tick = function () {
+                if (running) {
+                    generation++;
+                    world.next();
+                    draw();
+                    setTimeout(tick, 50);
+                }
+            };
+
+            var resize = function () {
+                world = new universe.Universe(parseInt(columns.value, 10), 
+                                              parseInt(rows.value, 10)),
+                generation = 0;
+                canvas.width = world.columns() * cellSize;
+                canvas.height = world.rows() * cellSize;
+            };
+
+            var init = function () {
+                resize();
+                seed();
+                draw();
+            };
+
+            toggle.addEventListener('click', function () {
+                        running = !running;
+                        toggle.innerText = running ? 'Stop' : 'Start';
+
+                        if (running) {
+                            tick();
+                        }
+                    }, false);
+            changeSize.addEventListener('click', function () {
+                        init();
+                    }, false);
+            seedWorld.addEventListener('click', function () {
+                        resize();
+                        seed();
+                        draw();
+                    }, false);
+            clearWorld.addEventListener('click', function () {
+                        running = false;
+                        resize();
+                        draw();
+                    }, false);
+
+            canvas.addEventListener('click', function (e) {
+                        if (running) { return; }
+
+                        var x = e.clientX - canvas.offsetLeft,
+                            y = e.clientY - canvas.offsetTop,
+                            col = Math.floor(x / cellSize),
+                            row = Math.floor(y / cellSize);
+
+                        var currentCell = world.cell(col, row);
+
+                        if (currentCell.isAlive()) {
+                            world.cells[row][col] = cell.dead;
+                        }
+                        else {
+                            world.cells[row][col] = cell.alive;
+                        }
+
+                        draw();
+                    }, false);
+
+            init();
+            tick();
+        };
+    </script>
+</html>
